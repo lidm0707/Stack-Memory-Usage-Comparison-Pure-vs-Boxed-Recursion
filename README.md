@@ -353,6 +353,93 @@ The "boxed vs pure" debate is oversimplified - the reality is nuanced, operation
 
 ## Benchmark Results
 
+# Comprehensive Analysis Report
+
+## Executive Summary
+
+This analysis demonstrates the dramatic impact of data type choices and boxing strategies on stack memory usage in recursive operations. Key findings show that boxing can reduce stack usage by up to 56% for complex data types and enable significantly deeper recursion.
+
+## Test Results Summary
+
+### 1. Numeric Types Performance
+
+| Data Type | Stack Usage (bytes/level) | Maximum Depth | Notes |
+|-----------|---------------------------|---------------|-------|
+| `u8` | ~80 | High | Small data, fits in registers |
+| `u64` | ~80 | High | Same as u8 despite 8x larger size |
+| `u128` (pure) | ~112 | ~71,000 | Large data type increases stack usage |
+| `u128` (boxed) | ~80 | 100,000+ | Boxing reduces stack to small type levels |
+
+**Key Insight**: Data size only matters when it exceeds register capacity. Boxing eliminates this penalty for large data types.
+
+### 2. String Operations Performance
+
+| Approach | Stack Usage (bytes/level) | Maximum Depth | Stack Reduction |
+|----------|---------------------------|---------------|-----------------|
+| Pure String Building | ~256 | ~32,000 | Baseline |
+| Boxed String Building | ~112 | 50,000+ | **56% reduction** |
+
+**Key Insight**: String manipulation is stack-intensive due to object overhead. Boxing provides massive benefits for complex operations.
+
+### 3. Scalability Comparison
+
+| Test Case | Pure Max Depth | Boxed Max Depth | Improvement |
+|-----------|----------------|-----------------|-------------|
+| `u128` factorial | ~71,000 | 100,000+ | **40%+ increase** |
+| String building | ~32,000 | 50,000+ | **56%+ increase** |
+
+## Technical Analysis
+
+### Stack Usage Patterns
+
+1. **Small Data Types (u8, u64)**: ~80 bytes/level
+   - Function call overhead dominates
+   - Data size irrelevant when fits in registers
+
+2. **Large Data Types (u128)**: 
+   - Pure: ~112 bytes/level (+40% overhead)
+   - Boxed: ~80 bytes/level (same as small types)
+
+3. **Complex Operations (Strings)**:
+   - Pure: ~256 bytes/level (3.2x small types)
+   - Boxed: ~112 bytes/level (1.4x small types)
+
+### Why Boxing Works
+
+1. **Memory Layout**: Large objects moved to heap, only pointers remain on stack
+2. **Call Overhead**: Function call cost remains constant (~80 bytes/level)
+3. **Data Movement**: Reduced register pressure and stack manipulation
+
+## Practical Implications
+
+### When to Use Boxing
+
+✅ **Highly Recommended:**
+- Recursive algorithms with large data types
+- String manipulation in recursive contexts
+- Deep recursion scenarios (>50,000 levels)
+
+✅ **Consider for:**
+- Performance-critical recursive code
+- Applications with limited stack space
+- Complex data structure operations
+
+❌ **Not Necessary:**
+- Simple numeric types (u8, u64) in moderate recursion
+- Shallow recursion (<1,000 levels)
+
+## Performance vs Safety Tradeoff
+
+| Factor | Pure Recursion | Boxed Recursion |
+|---------|----------------|-----------------|
+| **Speed** | Fastest | Slower (heap allocation) |
+| **Memory Efficiency** | Identical for factorial, 56% better for pure strings | Higher stack for pure strings, but persistent data |
+| **Safety** | Stack overflow risk | Safer (heap allocation) |
+| **Max Depth** | ~100,000 levels (factorial), ~32,000 (strings) | ~100,000 levels (factorial), ~50,000+ (strings) |
+| **Cache Locality** | Better | Worse (heap fragmentation) |
+| **Complexity** | Simpler | More complex |
+| **Data Persistence** | None | Data structure persists |
+
 For detailed benchmark results, see:
 - `BENCHMARK_RESULTS.md` - Standard benchmark results
 - `N_2000_BENCHMARK_RESULTS.md` - Detailed analysis for n=2000 case# Stack-Memory-Usage-Comparison-Pure-vs-Boxed-Recursion
